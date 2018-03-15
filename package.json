@@ -1,0 +1,52 @@
+{
+  "name": "bankussd",
+  "version": "1.0.0",
+  "description": "USSD application for vpay demo for Banks",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/server",
+    "dev": "nodemon",
+    "deploy": "pm2 start pm2deploy.json",
+    "clean": "rm -rf dist && mkdir dist",
+    "build": "yarn clean && babel -d ./dist . -s  --copy-files --ignore admin,node_modules,logs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://sudais90@bitbucket.org/sudais90/bankussd.git"
+  },
+  "dependencies": {
+    "axios": "^0.18.0",
+    "body-parser": "~1.18.2",
+    "cookie-parser": "~1.4.3",
+    "cors": "^2.8.4",
+    "debug": "^2.6.9",
+    "dotenv": "^5.0.1",
+    "express": "~4.16.0",
+    "express-session": "^1.15.6",
+    "express-xml-bodyparser": "^0.3.0",
+    "helmet": "^3.8.2",
+    "moment": "^2.19.3",
+    "morgan": "~1.9.0",
+    "mysql2": "^1.4.2",
+    "sequelize": "^4.13.8",
+    "sequelize-cli": "^3.0.0",
+    "xml2js": "^0.4.19"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "babel-preset-env": "^1.6.0",
+    "eslint": "^4.9.0",
+    "eslint-config-equimper": "^2.2.1",
+    "nodemon": "^1.12.1"
+  },
+  "keywords": [
+    "veepay",
+    "vpay",
+    "ussd"
+  ],
+  "author": "Zuure George Kutomba",
+  "license": "ISC",
+  "homepage": "https://sudais90@bitbucket.org/sudais90/bankussd.git#readme"
+}

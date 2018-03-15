@@ -1,0 +1,17 @@
+{
+  "restartable": "rs", 
+  "ignore": [
+    ".git",
+    "node_modules",
+    "admin"
+  ],
+  "verbose": false,
+  "args": [
+    "bin/www"
+  ],
+  "exec": "babel-node",
+  "watch": [
+    "src/"
+  ],
+  "ext": "js json"
+}
