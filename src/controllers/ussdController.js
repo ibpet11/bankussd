@@ -9,13 +9,13 @@ class VpayUssd {
     this.sessionid = sessionid[0];
     this.network = network[0];
     this.ussdinput = ussdinput[0];
-    this.themessage = `Please select an item
-      1). Transfer Money
-      2). Check Account balance
-      3). Check Transactions
-      4). Topup Airtime
-      5). Veepay
-      6). Pay Utilities`;
+    this.themessage = `ABC Banking Menu
+      1. Transfer Money
+      2. Check Account balance
+      3. Check Transactions
+      4. Topup Airtime
+      5. Veepay
+      6. Pay Utilities`;
     this.accessToken = token;
   }
   /**
@@ -98,6 +98,7 @@ class VpayUssd {
         return this.response(this.themessage);
       } else if (ssid.menulevel === 1) {
         if (ssid.stage === 0) {
+          ssid.destroy();
           return this.response(
             `Destination Account is ${this.ussdinput}`,
             true,
@@ -105,13 +106,16 @@ class VpayUssd {
           );
         }
         if (ssid.stage === 1) {
+          ssid.destroy();
           return this.response(`Account PIN is ${this.ussdinput}`, true, false);
         }
         if (ssid.stage === 2) {
+          ssid.destroy();
           return this.response(`PIN is ${this.ussdinput}`, true, false);
         }
         if (ssid.stage === 3) {
           // you have the agent code.....
+          ssid.destroy();
           return this.response(
             `Your Account will be credited with an amount of ${this.ussdinput}`,
             true,
@@ -131,9 +135,7 @@ class VpayUssd {
 
             const { data } = vrcResPonse;
             return this.response(
-              `The VRC ${this.ussdinput} belongs to ${data.name},${
-                data.address
-              }, ${data.city} phone:${data.phone}, 
+              `${this.ussdinput}, ${data.name},${data.address}, ${data.city}, 
               Please enter amount`,
               true,
               true
@@ -151,9 +153,8 @@ class VpayUssd {
 
           const { data } = vinResponse;
           return this.response(
-            `The VRC ${this.ussdinput} belongs to ${data.name},${
-              data.address
-            }, ${data.city} phone:${data.phone}, 
+            `${this.ussdinput}, ${data.name},${data.address
+            }, ${data.city}, 
             Please enter amount`,
             true,
             true
@@ -161,14 +162,24 @@ class VpayUssd {
         }
       } else if (ssid.menulevel === 2) {
         ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
-        return this.response('Enter Reference Message');
+        return this.response('Enter Reference');
       } else if (ssid.menulevel === 3) {
+        ssid.update({ menulevel: 4, stage: 0 });
+        
+        if (ssid.stage === 0) {
+          return this.response(
+            `GHS ${ssid.amount} will be debited from your account.
+             Enter Pin to Proceed`
+          );
+        }
+      } else if (ssid.menulevel === 4) {
         const myConfig = {
           headers: {
             'x-access-token': this.accessToken,
           },
         };
         if (ssid.stage === 0) {
+          // we now have the pin then we debit the persons account
           const transid = Math.random().toString(36).substring(7);
           const results = await axios.post(
             settings.paymentUrl,
@@ -188,15 +199,17 @@ class VpayUssd {
             {
               from: 'ABC Bank',
               to: this.msisdn,
-              text: `Your Account 89990XXXXXX02 has been debited with GHS ${ssid.amount} on ${data.date}. Ref: ${data.referenceid}.Balance: GHS 5000.00. Helpline: +233 24408xxx8`,
+              text: `Your Account 89990XXXXXX02 has been debited with GHS ${ssid.amount}, ${data.date}. Ref: ${data.referenceid}.Balance: GHS 5000.00. Helpline: +233 24408xxx8`,
             },
             auths,
             config,
           );
           // const { messages } = smsResults;
           console.log(smsResults);
+          ssid.destroy();
           return this.response(
-            `Transaction ID is ${data.transactionid} and Refernce ID is ${data.referenceid}`,
+            `Transaction ID ${data.transactionid}, Reference ${data.referenceid}.
+            Your account has been debited with GHS ${ssid.amount} successfully, Thank you!`,
             true,
             false
           );
