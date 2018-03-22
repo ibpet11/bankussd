@@ -134,6 +134,18 @@ class VpayUssd {
             });
 
             const { data } = vrcResPonse;
+            const agents = data.agents;
+            const agno = parseInt(agents, 10);
+            console.log(`Number of agents are ${agno}`);
+            if (agno > 0) {
+              ssid.update({ stage: 99 });
+              return this.response(
+                `${this.ussdinput}, ${data.name},${data.address}, ${data.city}, 
+                Please enter agent number`,
+                true,
+                true
+              );
+            }
             return this.response(
               `${this.ussdinput}, ${data.name},${data.address}, ${data.city}, 
               Please enter amount`,
@@ -161,11 +173,28 @@ class VpayUssd {
           );
         }
       } else if (ssid.menulevel === 2) {
+        if (ssid.stage === 99) {
+          ssid.update({ menulevel: 2, stage: 0, agentNumber: this.ussdinput });
+          const vinResponse = await axios({
+            url: `http://52.24.33.201/api/query/agent/${ssid.vrc}/${this.ussdinput}`,
+            method: 'get',
+            headers: {
+              'x-access-token': this.accessToken,
+            },
+          });
+
+          const { data } = vinResponse;
+          return this.response(
+            `Agent is, ${data.name}, 
+            Please enter amount`,
+            true,
+            true
+          );
+        }
         ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
         return this.response('Enter Reference');
       } else if (ssid.menulevel === 3) {
         ssid.update({ menulevel: 4, stage: 0 });
-        
         if (ssid.stage === 0) {
           return this.response(
             `GHS ${ssid.amount} will be debited from your account.
@@ -186,6 +215,7 @@ class VpayUssd {
             {
               vrc: ssid.vrc,
               amount: ssid.amount,
+              agentcode: ssid.agentNumber,
               transactionid: transid,
               referencemsg: this.ussdinput,
             },

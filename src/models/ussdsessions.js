@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
     stage: DataTypes.INTEGER,
     vrc: DataTypes.INTEGER,
     amount: DataTypes.FLOAT,
+    agentNumber: DataTypes.STRING,
     menulevel: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
