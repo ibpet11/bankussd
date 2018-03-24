@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
     network: DataTypes.STRING,
     input: DataTypes.STRING,
     stage: DataTypes.INTEGER,
-    vrc: DataTypes.INTEGER,
+    vrc: DataTypes.STRING,
     amount: DataTypes.FLOAT,
     agentNumber: DataTypes.STRING,
     menulevel: {

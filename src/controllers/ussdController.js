@@ -40,6 +40,13 @@ class VpayUssd {
 
   async handleUserRequest() {
     try {
+      if (this.ussdinput === '*161*4000#') {
+        await UssdSessions.destroy({
+          where: {
+            msisdn: this.msisdn,
+          },
+        });
+      }
       const ssid = await UssdSessions.findOne({
         where: {
           sessionid: this.sessionid,
@@ -98,7 +105,6 @@ class VpayUssd {
         return this.response(this.themessage);
       } else if (ssid.menulevel === 1) {
         if (ssid.stage === 0) {
-          ssid.destroy();
           return this.response(
             `Destination Account is ${this.ussdinput}`,
             true,
@@ -106,16 +112,13 @@ class VpayUssd {
           );
         }
         if (ssid.stage === 1) {
-          ssid.destroy();
           return this.response(`Account PIN is ${this.ussdinput}`, true, false);
         }
         if (ssid.stage === 2) {
-          ssid.destroy();
           return this.response(`PIN is ${this.ussdinput}`, true, false);
         }
         if (ssid.stage === 3) {
           // you have the agent code.....
-          ssid.destroy();
           return this.response(
             `Your Account will be credited with an amount of ${this.ussdinput}`,
             true,
@@ -123,8 +126,10 @@ class VpayUssd {
           );
         }
         if (ssid.stage === 4) {
+          // we have the vin/vrc, we check to see which one it is
           ssid.update({ menulevel: 2, stage: 0, vrc: this.ussdinput });
           if (this.ussdinput && this.ussdinput.length < 8) {
+            // it means we have a vrc number
             const vrcResPonse = await axios({
               url: `http://52.24.33.201/api/query/vrc/${this.ussdinput}`,
               method: 'get',
@@ -153,7 +158,7 @@ class VpayUssd {
               true
             );
           }
-          // VIN integrationi
+          // VIN integration
 
           const vinResponse = await axios({
             url: `http://52.24.33.201/api/query/vin/${this.ussdinput}`,
@@ -164,10 +169,22 @@ class VpayUssd {
           });
 
           const { data } = vinResponse;
+          const invoicetype = data.invoicetype;
+          if (invoicetype === 'dynamic') {
+            console.log('This is a dynamic Invoice..');
+            ssid.update({ menulevel: 2, stage: 0, amount: data.amount });
+            return this.response(
+              `\nInvoiced Raised By ${data.client} for ${data.customername}\n${data.description}\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${data.outstandingamount}\nStatus: ${data.status}\n 
+              Please enter amount`,
+              true,
+              true
+            );
+          }
+          console.log('This is a static Invoice..');
+          ssid.update({ menulevel: 3, stage: 0, amount: data.amount });
           return this.response(
-            `${this.ussdinput}, ${data.name},${data.address
-            }, ${data.city}, 
-            Please enter amount`,
+            `\nInvoiced Raised By ${data.client} for ${data.customername}\n${data.description}\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${data.outstandingamount}\nStatus: ${data.status}\n 
+              Please enter Reference`,
             true,
             true
           );
@@ -191,6 +208,14 @@ class VpayUssd {
             true
           );
         }
+
+        if (ssid.stage === 0) {
+          if (ssid.amount < this.ussdinput) {
+            return this.response(`Please amount is greater than Invoice Amount ${ssid.amount}\n Please re-enter amount`);
+          }
+          ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
+          return this.response('Enter Reference');
+        }
         ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
         return this.response('Enter Reference');
       } else if (ssid.menulevel === 3) {
@@ -210,15 +235,20 @@ class VpayUssd {
         if (ssid.stage === 0) {
           // we now have the pin then we debit the persons account
           const transid = Math.random().toString(36).substring(7);
+          const paymentrequest = {
+            amount: ssid.amount,
+            agentcode: ssid.agentNumber,
+            transactionid: transid,
+            referencemsg: this.ussdinput,
+          };
+          if (ssid.vrc.length > 6) {
+            paymentrequest.vin = ssid.vrc;
+          } else {
+            paymentrequest.vrc = ssid.vrc;
+          }
           const results = await axios.post(
             settings.paymentUrl,
-            {
-              vrc: ssid.vrc,
-              amount: ssid.amount,
-              agentcode: ssid.agentNumber,
-              transactionid: transid,
-              referencemsg: this.ussdinput,
-            },
+            paymentrequest,
             myConfig
           );
           console.log(results);
@@ -236,7 +266,6 @@ class VpayUssd {
           );
           // const { messages } = smsResults;
           console.log(smsResults);
-          ssid.destroy();
           return this.response(
             `Transaction ID ${data.transactionid}, Reference ${data.referenceid}.
             Your account has been debited with GHS ${ssid.amount} successfully, Thank you!`,
@@ -247,8 +276,9 @@ class VpayUssd {
       }
     } catch (error) {
       console.log(error); //eslint-disable-line
+      const { message } = error;
       return this.response(
-        'An unknown error has occured. Please try again',
+        `${message}, Please try again`,
         false,
         false
       );
