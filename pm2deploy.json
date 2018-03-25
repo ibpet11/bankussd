@@ -1,17 +1,17 @@
 {
     "apps": [{
       "name": "bankussd",
-      "script": "bin/www",
+      "script": "bin/www.js",
       "watch": false,
       "exec_mode": "fork",
       "env": {
         "NODE_ENV": "production",
-        "PORT": 9000,
+        "PORT": 9090,
         "DEBUG":"server:*"
       },
       "env_production": {
         "NODE_ENV": "production",
-        "PORT": 9000,
+        "PORT": 9090,
         "DEBUG":"server:*"
       },
       "ignore_watch": ["[\\/\\\\]\\./", "node_modules"]

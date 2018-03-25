@@ -4,10 +4,10 @@
  * Module dependencies.
  */
 
-const { createServer } = require('http');
+import { createServer } from 'http';
+import './env';
+import app from '../app.js';
 // const debug = require('debug')('server:server');
-require('./env');
-const app = require('../app.js');
 
 function getport(mode = 'development') {
   const config = {

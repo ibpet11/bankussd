@@ -7,7 +7,7 @@
   ],
   "verbose": false,
   "args": [
-    "bin/www"
+    "bin/www.js"
   ],
   "exec": "babel-node",
   "watch": [
