@@ -61,7 +61,6 @@ class VpayUssd {
           network: this.network,
           input: this.ussdinput,
           menulevel: 0,
-          
         });
         return this.response(this.themessage);
       }
@@ -172,18 +171,30 @@ class VpayUssd {
           const invoicetype = data.invoicetype;
           if (invoicetype === 'dynamic') {
             console.log('This is a dynamic Invoice..');
-            ssid.update({ menulevel: 2, stage: 0, amount: data.outstandingamount });
+            ssid.update({
+              menulevel: 2,
+              stage: 0,
+              amount: data.outstandingamount,
+            });
             return this.response(
-              `\nInvoiced Raised By ${data.client} for ${data.customername}\n${data.description}\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${data.outstandingamount}\nStatus: ${data.status}\n 
+              `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
+                data.description
+              }\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${
+                data.outstandingamount
+              }\nStatus: ${data.status}\n 
               Please enter amount`,
               true,
               true
             );
           }
-          console.log('This is a static Invoice..');
+          console.log('This is a static Invoice..'); // eslint-disable-line
           ssid.update({ menulevel: 3, stage: 0, amount: data.amount });
           return this.response(
-            `\nInvoiced Raised By ${data.client} for ${data.customername}\n${data.description}\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${data.outstandingamount}\nStatus: ${data.status}\n 
+            `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
+              data.description
+            }\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${
+              data.outstandingamount
+            }\nStatus: ${data.status}\n 
               Please enter Reference`,
             true,
             true
@@ -193,7 +204,9 @@ class VpayUssd {
         if (ssid.stage === 99) {
           ssid.update({ menulevel: 2, stage: 0, agentNumber: this.ussdinput });
           const vinResponse = await axios({
-            url: `http://52.24.33.201/api/query/agent/${ssid.vrc}/${this.ussdinput}`,
+            url: `http://52.24.33.201/api/query/agent/${ssid.vrc}/${
+              this.ussdinput
+            }`,
             method: 'get',
             headers: {
               'x-access-token': this.accessToken,
@@ -211,7 +224,11 @@ class VpayUssd {
 
         if (ssid.stage === 0) {
           if (ssid.amount < this.ussdinput) {
-            return this.response(`Please amount is greater than Otstanding Amount ${ssid.amount}\n Please re-enter amount`);
+            return this.response(
+              `Please amount is greater than Otstanding Amount ${
+                ssid.amount
+              }\n Please re-enter amount`
+            );
           }
           ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
           return this.response('Enter Reference');
@@ -234,7 +251,9 @@ class VpayUssd {
         };
         if (ssid.stage === 0) {
           // we now have the pin then we debit the persons account
-          const transid = Math.random().toString(36).substring(7);
+          const transid = Math.random()
+            .toString(36)
+            .substring(7);
           const paymentrequest = {
             amount: ssid.amount,
             agentcode: ssid.agentNumber,
@@ -251,7 +270,7 @@ class VpayUssd {
             paymentrequest,
             myConfig
           );
-          console.log(results);
+          console.log(results); // eslint-disable-line
           const { data } = results;
 
           const smsResults = await axios.post(
@@ -259,16 +278,23 @@ class VpayUssd {
             {
               from: 'ABC Bank',
               to: this.msisdn,
-              text: `Your Account 89990XXXXXX02 has been debited with GHS ${ssid.amount}, ${data.date}. Ref: ${data.referenceid}.Balance: GHS 5000.00. Helpline: +233 24408xxx8`,
+              text: `Your Account 89990XXXXXX02 has been debited with GHS ${
+                ssid.amount
+              }, ${data.date}. Ref: ${
+                data.referenceid
+              }.Balance: GHS 5000.00. Helpline: +233 24408xxx8`,
             },
             auths,
-            config,
+            config
           );
           // const { messages } = smsResults;
-          console.log(smsResults);
+          console.log(smsResults); // eslint-disable-line
           return this.response(
-            `Transaction ID ${data.transactionid}, Reference ${data.referenceid}.
-            Your account has been debited with GHS ${ssid.amount} successfully, Thank you!`,
+            `Transaction ID ${data.transactionid}, Reference ${
+              data.referenceid
+            }.
+            Your account has been debited with GHS 
+            ${ssid.amount} successfully, Thank you!`,
             true,
             false
           );
@@ -277,11 +303,7 @@ class VpayUssd {
     } catch (error) {
       console.log(error); //eslint-disable-line
       const { message } = error;
-      return this.response(
-        `${message}, Please try again`,
-        false,
-        false
-      );
+      return this.response(`${message}, Please try again`, false, false);
     }
   }
 }
@@ -315,7 +337,7 @@ class UssdController {
         req.session.cookie.expires = new Date(Date.now() + hour); //eslint-disable-line
       } else {
         // check if the session has expired.
-        // console.log('using token=', req.session.token);
+        console.log('using token=', req.session.token); // eslint-disable-line
       }
 
       const ussdRequest = req.body.pryussd_req; // eslint-disable-line
@@ -325,6 +347,7 @@ class UssdController {
       res.set('Content-Type', 'text/xml');
       res.status(201).send(response);
     } catch (error) {
+      console.log(error.message); //eslint-disable-line
       res.set('Content-Type', 'text/xml');
       res.status(201).send(`
       <pryussd_resp>
