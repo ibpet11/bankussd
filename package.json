@@ -4,9 +4,8 @@
   "description": "USSD application for vpay demo for Banks",
   "private": true,
   "scripts": {
-    "start": "node ./bin/server",
+    "start": "node ./bin/www.js",
     "dev": "nodemon",
-    "deploy": "pm2 start pm2deploy.json",
     "clean": "rm -rf dist && mkdir dist",
     "build": "yarn clean && babel -d ./dist . -s  --copy-files --ignore admin,node_modules,logs"
   },
