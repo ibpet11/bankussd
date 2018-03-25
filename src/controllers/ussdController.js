@@ -172,7 +172,7 @@ class VpayUssd {
           const invoicetype = data.invoicetype;
           if (invoicetype === 'dynamic') {
             console.log('This is a dynamic Invoice..');
-            ssid.update({ menulevel: 2, stage: 0, amount: data.amount });
+            ssid.update({ menulevel: 2, stage: 0, amount: data.outstandingamount });
             return this.response(
               `\nInvoiced Raised By ${data.client} for ${data.customername}\n${data.description}\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${data.outstandingamount}\nStatus: ${data.status}\n 
               Please enter amount`,
@@ -211,7 +211,7 @@ class VpayUssd {
 
         if (ssid.stage === 0) {
           if (ssid.amount < this.ussdinput) {
-            return this.response(`Please amount is greater than Invoice Amount ${ssid.amount}\n Please re-enter amount`);
+            return this.response(`Please amount is greater than Otstanding Amount ${ssid.amount}\n Please re-enter amount`);
           }
           ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
           return this.response('Enter Reference');
