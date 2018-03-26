@@ -223,13 +223,17 @@ class VpayUssd {
         }
 
         if (ssid.stage === 0) {
-          if (ssid.amount < this.ussdinput) {
-            return this.response(
-              `Please amount is greater than Otstanding Amount ${
-                ssid.amount
-              }\n Please re-enter amount`
-            );
+          if (ssid.vrc.length > 6) {
+            console.log('this number entered was a VIN, hence we check against outstanding amount');
+            if (ssid.amount < this.ussdinput) {
+              return this.response(
+                `Please amount is greater than Outstanding Amount ${
+                  ssid.amount
+                }\n Please re-enter amount`
+              );
+            }
           }
+          
           ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
           return this.response('Enter Reference');
         }
