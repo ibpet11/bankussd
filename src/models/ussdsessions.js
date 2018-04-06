@@ -9,6 +9,10 @@ module.exports = (sequelize, DataTypes) => {
     vrc: DataTypes.STRING,
     amount: DataTypes.FLOAT,
     agentNumber: DataTypes.STRING,
+    referencemsg: DataTypes.STRING,
+    agentName: DataTypes.STRING,
+    vrcOwner: DataTypes.STRING,
+    vinType: DataTypes.STRING,
     menulevel: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
