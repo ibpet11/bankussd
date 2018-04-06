@@ -1,4 +1,5 @@
 import axios from 'axios';
+import randomize from 'randomatic';
 import { UssdSessions } from '../models';
 import settings from '../config/settings';
 
@@ -139,6 +140,11 @@ class VpayUssd {
 
             const { data } = vrcResPonse;
             const agents = data.agents;
+            const ref = data.referencemsg;
+            const vrcParent = data.name;
+
+            ssid.update({ referencemsg: ref, vrcOwner: vrcParent });
+
             const agno = parseInt(agents, 10);
             console.log(`Number of agents are ${agno}`);
             if (agno > 0) {
@@ -169,33 +175,47 @@ class VpayUssd {
 
           const { data } = vinResponse;
           const invoicetype = data.invoicetype;
-          if (invoicetype === 'dynamic') {
-            console.log('This is a dynamic Invoice..');
-            ssid.update({
-              menulevel: 2,
-              stage: 0,
-              amount: data.outstandingamount,
-            });
+
+          if (data.outstandingamount === 0) {
+            // please this invoiced has been paid 
             return this.response(
               `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
                 data.description
               }\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${
                 data.outstandingamount
-              }\nStatus: ${data.status}\n 
-              Please enter amount`,
+              }\nStatus: ${data.status}
+              Please this invoice has already been paid, Thank you`,
+              true,
+              false
+            );
+          }
+          
+          if (invoicetype === 'dynamic') {
+            ssid.update({ menulevel: 2, stage: 88, amount: data.outstandingamount, vinType: invoicetype, vrcOwner: data.client, agentName: data.customername });
+            console.log('This is a dynamic Invoice..');
+            return this.response(
+              `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
+                data.description
+              }\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${
+                data.outstandingamount
+              }\nStatus: ${data.status}
+              1.Full Payment
+              2.Part Payment
+              3.Exit`,
               true,
               true
             );
           }
           console.log('This is a static Invoice..'); // eslint-disable-line
-          ssid.update({ menulevel: 3, stage: 0, amount: data.amount });
+          ssid.update({ menulevel: 2, stage: 88, amount: data.outstandingamount, vinType: invoicetype, vrcOwner: data.client, agentName: data.customername });
           return this.response(
             `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
               data.description
             }\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${
               data.outstandingamount
-            }\nStatus: ${data.status}\n 
-              Please enter Reference`,
+            }\nStatus: ${data.status}
+            1.Make Payment
+            2.Exit`,
             true,
             true
           );
@@ -214,32 +234,99 @@ class VpayUssd {
           });
 
           const { data } = vinResponse;
+          const aname = data.name;
+          ssid.update({ agentName: aname });
           return this.response(
-            `Agent is, ${data.name}, 
-            Please enter amount`,
+            `Making Payment to ${ssid.vrcOwner} (${data.name}) 
+             Please enter amount`,
             true,
             true
           );
         }
 
-        if (ssid.stage === 0) {
-          if (ssid.amount < this.ussdinput) {
+        if (ssid.stage === 88) {
+          if (ssid.vinType === 'dynamic') {
+            const uinput = parseInt(this.ussdinput, 10);
+            if (uinput === 1) {
+              ssid.update({ menulevel: 4, stage: 0 });
+              return this.response(
+                `GHS ${ssid.amount} will be debited from your account for ${ssid.vrcOwner}.
+                 Full Payment
+                 Enter Pin to Proceed`
+              );
+            }
+
+            if (uinput === 2) {
+              ssid.update({ menulevel: 2, stage: 0 });
+              return this.response(
+                `Making Part Payment for ${ssid.vrcOwner}. Amount Pending GHS ${ssid.amount}
+                 Enter Amount`
+              );
+            }
+
+            if (uinput === 3) {
+              return this.response(
+                'Payment Cancelled, Thank you!!',
+                true,
+                false
+              );
+            }
+          }
+
+          // checking for static invoices
+          const uinput = parseInt(this.ussdinput, 10);
+          if (uinput === 1) {
+            ssid.update({ menulevel: 4, stage: 0 });
+            // it means the person is about to make payment on the invoice amount
             return this.response(
-              `Please amount is greater than Otstanding Amount ${
-                ssid.amount
-              }\n Please re-enter amount`
+              `GHS ${ssid.amount} will be debited from your account for ${ssid.vrcOwner}.
+                 Enter Pin to Proceed`
             );
           }
+
+          if (uinput === 3) {
+            return this.response(
+              'Payment Cancelled, Thank you!!',
+              true,
+              false
+            );
+          }
+        }
+
+        if (ssid.stage === 0) {
+          if (ssid.vrc.length > 6) {
+            console.log('this number entered was a VIN, hence we check against outstanding amount');
+
+            if (ssid.amount < this.ussdinput) {
+              return this.response(
+                `Please amount is greater than Outstanding Amount ${
+                  ssid.amount
+                }\n Please re-enter amount`
+              );
+            }
+            ssid.update({ menulevel: 4, stage: 0, amount: this.ussdinput });
+            return this.response(
+              `GHS ${this.ussdinput} will be debited from your account for ${ssid.vrcOwner} (${ssid.agentName}).
+               Enter Pin to Proceed`
+            );
+          }
+          
           ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
-          return this.response('Enter Reference');
+          return this.response(`${ssid.referencemsg}`);
         }
         ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
-        return this.response('Enter Reference');
+        return this.response(`${ssid.referencemsg}`);
       } else if (ssid.menulevel === 3) {
         ssid.update({ menulevel: 4, stage: 0 });
         if (ssid.stage === 0) {
+          if (ssid.vrc.length > 6) {
+            return this.response(
+              `GHS ${ssid.amount} will be debited from your account for ${ssid.vrcOwner}.
+               Enter Pin to Proceed`
+            );
+          }
           return this.response(
-            `GHS ${ssid.amount} will be debited from your account.
+            `GHS ${ssid.amount} will be debited from your account for ${ssid.vrcOwner} (${ssid.agentName}).
              Enter Pin to Proceed`
           );
         }
@@ -250,14 +337,12 @@ class VpayUssd {
           },
         };
         if (ssid.stage === 0) {
-          // we now have the pin then we debit the persons account
-          const transid = Math.random()
-            .toString(36)
-            .substring(7);
+          const tid = `ABC${randomize('0', 8)}`;
+          console.log(`Amount to be paid is ${ssid.amount}`);
           const paymentrequest = {
             amount: ssid.amount,
             agentcode: ssid.agentNumber,
-            transactionid: transid,
+            transactionid: tid,
             referencemsg: this.ussdinput,
           };
           if (ssid.vrc.length > 6) {
@@ -270,7 +355,7 @@ class VpayUssd {
             paymentrequest,
             myConfig
           );
-          console.log(results); // eslint-disable-line
+          // console.log(results); // eslint-disable-line
           const { data } = results;
 
           const smsResults = await axios.post(
@@ -290,11 +375,8 @@ class VpayUssd {
           // const { messages } = smsResults;
           console.log(smsResults); // eslint-disable-line
           return this.response(
-            `Transaction ID ${data.transactionid}, Reference ${
-              data.referenceid
-            }.
-            Your account has been debited with GHS 
-            ${ssid.amount} successfully, Thank you!`,
+            `Trans ID ${data.transactionid}, Ref. ${data.referenceid}.
+            Your account has been debited Successfully with GHS ${ssid.amount} for ${ssid.vrcOwner} (${ssid.agentName})`,
             true,
             false
           );
