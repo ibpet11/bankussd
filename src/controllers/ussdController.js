@@ -1,6 +1,6 @@
 import axios from 'axios';
 import randomize from 'randomatic';
-import { UssdSessions } from '../models';
+import { BankUssdSessions } from '../models';
 import settings from '../config/settings';
 
 class VpayUssd {
@@ -42,13 +42,13 @@ class VpayUssd {
   async handleUserRequest() {
     try {
       if (this.ussdinput === '*161*4000#') {
-        await UssdSessions.destroy({
+        await BankUssdSessions.destroy({
           where: {
             msisdn: this.msisdn,
           },
         });
       }
-      const ssid = await UssdSessions.findOne({
+      const ssid = await BankUssdSessions.findOne({
         where: {
           sessionid: this.sessionid,
           msisdn: this.msisdn,
@@ -56,7 +56,7 @@ class VpayUssd {
       });
       if (!ssid) {
         // create new session for this user
-        await UssdSessions.create({
+        await BankUssdSessions.create({
           msisdn: this.msisdn,
           sessionid: this.sessionid,
           network: this.network,
@@ -108,7 +108,7 @@ class VpayUssd {
           return this.response(
             `Destination Account is ${this.ussdinput}`,
             true,
-            false
+            false,
           );
         }
         if (ssid.stage === 1) {
@@ -122,7 +122,7 @@ class VpayUssd {
           return this.response(
             `Your Account will be credited with an amount of ${this.ussdinput}`,
             true,
-            false
+            false,
           );
         }
         if (ssid.stage === 4) {
@@ -153,14 +153,14 @@ class VpayUssd {
                 `${this.ussdinput}, ${data.name},${data.address}, ${data.city}, 
                 Please enter agent number`,
                 true,
-                true
+                true,
               );
             }
             return this.response(
               `${this.ussdinput}, ${data.name},${data.address}, ${data.city}, 
               Please enter amount`,
               true,
-              true
+              true,
             );
           }
           // VIN integration
@@ -177,7 +177,7 @@ class VpayUssd {
           const invoicetype = data.invoicetype;
 
           if (data.outstandingamount === 0) {
-            // please this invoiced has been paid 
+            // please this invoiced has been paid
             return this.response(
               `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
                 data.description
@@ -186,12 +186,19 @@ class VpayUssd {
               }\nStatus: ${data.status}
               Please this invoice has already been paid, Thank you`,
               true,
-              false
+              false,
             );
           }
-          
+
           if (invoicetype === 'dynamic') {
-            ssid.update({ menulevel: 2, stage: 88, amount: data.outstandingamount, vinType: invoicetype, vrcOwner: data.client, agentName: data.customername });
+            ssid.update({
+              menulevel: 2,
+              stage: 88,
+              amount: data.outstandingamount,
+              vinType: invoicetype,
+              vrcOwner: data.client,
+              agentName: data.customername,
+            });
             console.log('This is a dynamic Invoice..');
             return this.response(
               `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
@@ -203,11 +210,18 @@ class VpayUssd {
               2.Part Payment
               3.Exit`,
               true,
-              true
+              true,
             );
           }
           console.log('This is a static Invoice..'); // eslint-disable-line
-          ssid.update({ menulevel: 2, stage: 88, amount: data.outstandingamount, vinType: invoicetype, vrcOwner: data.client, agentName: data.customername });
+          ssid.update({
+            menulevel: 2,
+            stage: 88,
+            amount: data.outstandingamount,
+            vinType: invoicetype,
+            vrcOwner: data.client,
+            agentName: data.customername,
+          });
           return this.response(
             `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
               data.description
@@ -217,7 +231,7 @@ class VpayUssd {
             1.Make Payment
             2.Exit`,
             true,
-            true
+            true,
           );
         }
       } else if (ssid.menulevel === 2) {
@@ -240,7 +254,7 @@ class VpayUssd {
             `Making Payment to ${ssid.vrcOwner} (${data.name}) 
              Please enter amount`,
             true,
-            true
+            true,
           );
         }
 
@@ -250,17 +264,21 @@ class VpayUssd {
             if (uinput === 1) {
               ssid.update({ menulevel: 4, stage: 0 });
               return this.response(
-                `GHS ${ssid.amount} will be debited from your account for ${ssid.vrcOwner}.
+                `GHS ${ssid.amount} will be debited from your account for ${
+                  ssid.vrcOwner
+                }.
                  Full Payment
-                 Enter Pin to Proceed`
+                 Enter Pin to Proceed`,
               );
             }
 
             if (uinput === 2) {
               ssid.update({ menulevel: 2, stage: 0 });
               return this.response(
-                `Making Part Payment for ${ssid.vrcOwner}. Amount Pending GHS ${ssid.amount}
-                 Enter Amount`
+                `Making Part Payment for ${ssid.vrcOwner}. Amount Pending GHS ${
+                  ssid.amount
+                }
+                 Enter Amount`,
               );
             }
 
@@ -268,7 +286,7 @@ class VpayUssd {
               return this.response(
                 'Payment Cancelled, Thank you!!',
                 true,
-                false
+                false,
               );
             }
           }
@@ -279,38 +297,40 @@ class VpayUssd {
             ssid.update({ menulevel: 4, stage: 0 });
             // it means the person is about to make payment on the invoice amount
             return this.response(
-              `GHS ${ssid.amount} will be debited from your account for ${ssid.vrcOwner}.
-                 Enter Pin to Proceed`
+              `GHS ${ssid.amount} will be debited from your account for ${
+                ssid.vrcOwner
+              }.
+                 Enter Pin to Proceed`,
             );
           }
 
           if (uinput === 3) {
-            return this.response(
-              'Payment Cancelled, Thank you!!',
-              true,
-              false
-            );
+            return this.response('Payment Cancelled, Thank you!!', true, false);
           }
         }
 
         if (ssid.stage === 0) {
           if (ssid.vrc.length > 6) {
-            console.log('this number entered was a VIN, hence we check against outstanding amount');
+            console.log(
+              'this number entered was a VIN, hence we check against outstanding amount',
+            );
 
             if (ssid.amount < this.ussdinput) {
               return this.response(
                 `Please amount is greater than Outstanding Amount ${
                   ssid.amount
-                }\n Please re-enter amount`
+                }\n Please re-enter amount`,
               );
             }
             ssid.update({ menulevel: 4, stage: 0, amount: this.ussdinput });
             return this.response(
-              `GHS ${this.ussdinput} will be debited from your account for ${ssid.vrcOwner} (${ssid.agentName}).
-               Enter Pin to Proceed`
+              `GHS ${this.ussdinput} will be debited from your account for ${
+                ssid.vrcOwner
+              } (${ssid.agentName}).
+               Enter Pin to Proceed`,
             );
           }
-          
+
           ssid.update({ menulevel: 3, stage: 0, amount: this.ussdinput });
           return this.response(`${ssid.referencemsg}`);
         }
@@ -321,13 +341,17 @@ class VpayUssd {
         if (ssid.stage === 0) {
           if (ssid.vrc.length > 6) {
             return this.response(
-              `GHS ${ssid.amount} will be debited from your account for ${ssid.vrcOwner}.
-               Enter Pin to Proceed`
+              `GHS ${ssid.amount} will be debited from your account for ${
+                ssid.vrcOwner
+              }.
+               Enter Pin to Proceed`,
             );
           }
           return this.response(
-            `GHS ${ssid.amount} will be debited from your account for ${ssid.vrcOwner} (${ssid.agentName}).
-             Enter Pin to Proceed`
+            `GHS ${ssid.amount} will be debited from your account for ${
+              ssid.vrcOwner
+            } (${ssid.agentName}).
+             Enter Pin to Proceed`,
           );
         }
       } else if (ssid.menulevel === 4) {
@@ -353,7 +377,7 @@ class VpayUssd {
           const results = await axios.post(
             settings.paymentUrl,
             paymentrequest,
-            myConfig
+            myConfig,
           );
           // console.log(results); // eslint-disable-line
           const { data } = results;
@@ -370,15 +394,17 @@ class VpayUssd {
               }.Balance: GHS 5000.00. Helpline: +233 24408xxx8`,
             },
             auths,
-            config
+            config,
           );
           // const { messages } = smsResults;
           console.log(smsResults); // eslint-disable-line
           return this.response(
             `Trans ID ${data.transactionid}, Ref. ${data.referenceid}.
-            Your account has been debited Successfully with GHS ${ssid.amount} for ${ssid.vrcOwner} (${ssid.agentName})`,
+            Your account has been debited Successfully with GHS ${
+              ssid.amount
+            } for ${ssid.vrcOwner} (${ssid.agentName})`,
             true,
-            false
+            false,
           );
         }
       }
@@ -411,7 +437,7 @@ class UssdController {
             apikey: settings.apikey,
             secret: settings.secret,
           },
-          config
+          config,
         );
         const { data } = results;
         req.session.token = data.token; // eslint-disable-line

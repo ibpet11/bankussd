@@ -1,6 +1,6 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
-  const UssdSessions = sequelize.define('UssdSessions', {
+  const BankUssdSessions = sequelize.define('BankUssdSessions', {
     sessionid: DataTypes.STRING,
     msisdn: DataTypes.STRING,
     network: DataTypes.STRING,
@@ -18,5 +18,5 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0,
     },
   });
-  return UssdSessions;
+  return BankUssdSessions;
 };
