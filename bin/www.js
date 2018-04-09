@@ -106,7 +106,7 @@ function onListening() {
   const bind = typeof addr === 'string' ? `pipe  ${addr}` : `port ${addr.port}`;
   console.log(`Listening on  ${bind}`); // eslint-disable-line
   // purge the database and create the objects again
-  sequelize
-    .sync({ force: true })
-    .then(() => console.log('Database object created successfully')); // eslint-disable-line
+  // sequelize
+  //   .sync({ force: true })
+  //   .then(() => console.log('Database object created successfully')); // eslint-disable-line
 }
