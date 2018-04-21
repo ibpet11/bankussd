@@ -401,8 +401,8 @@ class VpayUssd {
           return this.response(
             `Trans ID ${data.transactionid}, Ref. ${data.referenceid}.
             Your account has been debited Successfully with GHS ${
-              ssid.amount
-            } for ${ssid.vrcOwner} (${ssid.agentName})`,
+  ssid.amount
+} for ${ssid.vrcOwner} (${ssid.agentName})`,
             true,
             false,
           );
