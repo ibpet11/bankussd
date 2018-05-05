@@ -139,25 +139,36 @@ class VpayUssd {
             });
 
             const { data } = vrcResPonse;
+            let vrcName = data.name;
+            let vrcAddress = data.address;
+            let vrcCity = data.city;
+
+            console.log(vrcName);
+
+            vrcName = vrcName.replace(/[^a-zA-Z ]/g, '');
+            vrcAddress = vrcAddress.replace(/[^a-zA-Z ]/g, '');
+            vrcCity = vrcCity.replace(/[^a-zA-Z ]/g, '');
+
             const agents = data.agents;
             const ref = data.referencemsg;
-            const vrcParent = data.name;
+            const vrcParent = vrcName;
 
             ssid.update({ referencemsg: ref, vrcOwner: vrcParent });
 
             const agno = parseInt(agents, 10);
+            
             console.log(`Number of agents are ${agno}`);
             if (agno > 0) {
               ssid.update({ stage: 99 });
               return this.response(
-                `${this.ussdinput}, ${data.name},${data.address}, ${data.city}, 
+                `${this.ussdinput}, ${vrcName},${vrcAddress}, ${vrcCity}, 
                 Please enter agent number`,
                 true,
                 true,
               );
             }
             return this.response(
-              `${this.ussdinput}, ${data.name},${data.address}, ${data.city}, 
+              `${this.ussdinput}, ${vrcName},${vrcAddress}, ${vrcCity},
               Please enter amount`,
               true,
               true,
@@ -174,13 +185,19 @@ class VpayUssd {
           });
 
           const { data } = vinResponse;
+          let clientName = data.client;
+          let custName = data.customername;
+          let dec = data.description;
           const invoicetype = data.invoicetype;
+
+          clientName = clientName.replace(/[^a-zA-Z ]/g, '');
+          custName = custName.replace(/[^a-zA-Z ]/g, '');
+          dec = dec.replace(/[^a-zA-Z ]/g, '');
 
           if (data.outstandingamount === 0) {
             // please this invoiced has been paid
             return this.response(
-              `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
-                data.description
+              `\nInvoiced Raised By ${clientName} for ${custName}\n${dec
               }\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${
                 data.outstandingamount
               }\nStatus: ${data.status}
@@ -200,9 +217,10 @@ class VpayUssd {
               agentName: data.customername,
             });
             console.log('This is a dynamic Invoice..');
+            
             return this.response(
-              `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
-                data.description
+              `\nInvoiced Raised By ${clientName} for ${custName}\n${
+                dec
               }\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${
                 data.outstandingamount
               }\nStatus: ${data.status}
@@ -223,8 +241,8 @@ class VpayUssd {
             agentName: data.customername,
           });
           return this.response(
-            `\nInvoiced Raised By ${data.client} for ${data.customername}\n${
-              data.description
+            `\nInvoiced Raised By ${clientName} for ${custName}\n${
+              dec
             }\nInvoice Amount: ${data.amount}\nOutstanding Amount: ${
               data.outstandingamount
             }\nStatus: ${data.status}
@@ -322,11 +340,19 @@ class VpayUssd {
                 }\n Please re-enter amount`,
               );
             }
+            
             ssid.update({ menulevel: 4, stage: 0, amount: this.ussdinput });
+            let agName = '';
+            if (ssid.agentName !== null && ssid.agentName !== '') {
+              // do something
+              agName = `(${ssid.agentName})`;
+            } else {
+              agName = '';
+            }
             return this.response(
               `GHS ${this.ussdinput} will be debited from your account for ${
                 ssid.vrcOwner
-              } (${ssid.agentName}).
+              } ${agName}.
                Enter Pin to Proceed`,
             );
           }
@@ -338,6 +364,13 @@ class VpayUssd {
         return this.response(`${ssid.referencemsg}`);
       } else if (ssid.menulevel === 3) {
         ssid.update({ menulevel: 4, stage: 0 });
+        let agName = '';
+        if (ssid.agentName !== null && ssid.agentName !== '') {
+          // do something
+          agName = `(${ssid.agentName})`;
+        } else {
+          agName = '';
+        }
         if (ssid.stage === 0) {
           if (ssid.vrc.length > 6) {
             return this.response(
@@ -350,7 +383,7 @@ class VpayUssd {
           return this.response(
             `GHS ${ssid.amount} will be debited from your account for ${
               ssid.vrcOwner
-            } (${ssid.agentName}).
+            } ${agName}.
              Enter Pin to Proceed`,
           );
         }
@@ -363,6 +396,13 @@ class VpayUssd {
         if (ssid.stage === 0) {
           const tid = `ABC${randomize('0', 8)}`;
           console.log(`Amount to be paid is ${ssid.amount}`);
+          let agName = '';
+          if (ssid.agentName !== null && ssid.agentName !== '') {
+            // do something
+            agName = `(${ssid.agentName})`;
+          } else {
+            agName = '';
+          }
           const paymentrequest = {
             amount: ssid.amount,
             agentcode: ssid.agentNumber,
@@ -402,7 +442,7 @@ class VpayUssd {
             `Trans ID ${data.transactionid}, Ref. ${data.referenceid}.
             Your account has been debited Successfully with GHS ${
   ssid.amount
-} for ${ssid.vrcOwner} (${ssid.agentName})`,
+} for ${ssid.vrcOwner} ${agName}`,
             true,
             false,
           );
